@@ -1,0 +1,21 @@
+- **critical** · [backend/Code.gs:248](backend/Code.gs:248), [backend/Code.gs:323](backend/Code.gs:323) — **배포된 웹앱에서 시트를 열 수 없습니다.** 편집기에서 `setup()`은 성공하지만, Google은 컨테이너에 바인딩된 스크립트라도 웹앱 실행 중에는 `getActiveSpreadsheet()`를 사용할 수 없다고 명시합니다. 정상 키로 호출해도 POST와 GET 모두 `server_error`가 됩니다. 테스트 목은 항상 활성 시트를 반환해 이 문제를 가립니다. `setup()`에서 시트 ID를 Script Properties에 저장하고, 웹 핸들러에서는 `SpreadsheetApp.openById()`로 여세요. [Google 컨테이너 바인딩 공식 문서](https://developers.google.com/apps-script/guides/bound#special_methods)
+
+- **major** · [backend/Code.gs:241](backend/Code.gs:241), [backend/Code.gs:299](backend/Code.gs:299) — **시트 쓰기를 확정하기 전에 락을 해제합니다.** 두 사람의 요청이 겹치면 두 번째 요청이 첫 번째 요청의 변경이 반영되기 전 상태를 읽고, 그 상태를 바탕으로 전체 데이터 범위를 다시 써서 한 사람의 운동을 누락시킬 수 있습니다. `setValues()` 후 락을 보유한 상태에서 `SpreadsheetApp.flush()`를 호출하고, 반영에 성공한 뒤 성공 응답을 만드세요. 현재 테스트 목은 쓰기를 즉시 반영하므로 이 순서를 검증하지 못합니다. [Google LockService 공식 문서](https://developers.google.com/apps-script/reference/lock/lock#releaselock)
+
+- **major** · [backend/Code.gs:161](backend/Code.gs:161), [backend/Code.gs:299](backend/Code.gs:299) — **운동 종류가 시트 수식으로 평가될 수 있습니다.** `type`은 공백과 길이만 검사한 뒤 `setValues()`에 전달됩니다. 유효한 쓰기 토큰으로 `=`로 시작하는 이름이 들어오면 원문 대신 수식 결과가 조회될 수 있고, 수식이 같은 비공개 시트의 다른 셀을 참조할 수도 있습니다. Sheets API의 `RAW` 쓰기처럼 문자열을 그대로 저장하는 경로를 사용하고, 실제 시트에서 원문이 보존되고 수식이 생기지 않는지 확인하세요. [Apps Script `setValues()` 문서](https://developers.google.com/apps-script/reference/spreadsheet/range#setvaluesvalues), [Sheets API `RAW` 문서](https://developers.google.com/workspace/sheets/api/reference/rest/v4/ValueInputOption)
+
+- **major** · [backend/Code.gs:266](backend/Code.gs:266), [backend/Code.gs:298](backend/Code.gs:298) — **기존 중복 행이 upsert 후에도 남습니다.** 수동 편집으로 동일 ID가 두 행에 들어간 상태에서 그 운동을 재전송하면, 메모리에서는 한 행으로 합쳐지지만 `setValues()`는 새 결과 길이만큼만 덮어씁니다. 뒤에 남은 행까지 GET에 포함돼 운동이 두 번 집계됩니다. 쓰기 성공 후 줄어든 데이터 범위의 꼬리를 락 안에서 지우고, 중복이 이미 존재하는 시트로 회귀 테스트를 추가하세요.
+
+- **major** · [backend/Code.gs:38](backend/Code.gs:38), [backend/README.md:23](backend/README.md:23) — **생성한 인증 키 세 개를 평문으로 로그에 남깁니다.** 예를 들어 배포 문제를 해결하려고 가이드대로 실행 로그를 캡처해 공유하면, 조회 키와 두 쓰기 토큰이 함께 노출될 수 있습니다. 로그에는 속성 이름과 생성 여부만 남기고, 값은 프로젝트 설정의 Script Properties에서 확인하도록 안내하세요. [Google Apps Script 로깅 문서](https://developers.google.com/apps-script/guides/logging)
+
+- **minor** · [backend/Code.gs:100](backend/Code.gs:100), [backend/Code.gs:179](backend/Code.gs:179) — **밀리초를 계산 전에 버립니다.** `07:05:00.900+09:00`에 시작해 `0.51`분간 운동했다면 종료 시각은 `07:05:31.500`이므로 저장값은 `07:05:31`이어야 합니다. 현재 코드는 `07:05:30`으로 저장합니다. 파싱 결과에 밀리초를 보존해 비교와 계산에 사용하고, ID와 저장 문자열을 만들 때 초 미만을 버리세요.
+
+- **minor** · [backend/Code.gs:96](backend/Code.gs:96), [backend/Code.gs:186](backend/Code.gs:186) — **잘못된 숫자가 유효한 값으로 저장됩니다.** `parseFloat()`는 정제 후 남은 문자열의 앞부분만 읽으므로 `142-150`이 평균 심박 `142`가 됩니다. 또 `0.04`분은 양수 검사를 통과한 뒤 `0.0`분으로 저장됩니다. 정제한 문자열 전체가 유한한 숫자인지 검사하고, 반올림한 운동 시간에도 양수 조건을 적용하세요.
+
+- **minor** · [docs/api.md:15](docs/api.md:15), [scripts/smoke.sh:24](scripts/smoke.sh:24) — **스모크 테스트가 브라우저의 교차 출처 조회를 검증하지 않습니다.** 단순 GET은 사전 요청을 생략하지만 브라우저는 리다이렉트와 최종 응답에 CORS 검사를 적용합니다. `curl -L`로 JSON을 받아도 Safari의 페이지 스크립트에서는 응답 읽기가 실패할 수 있습니다. 배포된 `/exec`를 GitHub Pages 출처의 로그아웃 상태 Safari에서 `fetch()`로 호출해, 유효한 키의 JSON과 잘못된 키의 `unauthorized`를 모두 읽을 수 있는지 배포 절차에 포함하세요. [Fetch 표준](https://fetch.spec.whatwg.org/#http-fetch), [Google ContentService 리다이렉트 문서](https://developers.google.com/apps-script/guides/content#redirects)
+
+- **minor** · [scripts/smoke.sh:15](scripts/smoke.sh:15), [scripts/smoke.sh:26](scripts/smoke.sh:26) — **이전 실행이 남긴 행으로 재실행이 거짓 통과할 수 있습니다.** 업로드한 행이 모두 거부돼도 POST는 `ok:true`를 반환할 수 있습니다. 고정 ID의 기존 행이 남아 있으면 이후 GET도 통과합니다. JSON을 파싱해 POST의 `rejected`가 비어 있고 `inserted + updated`가 1인지 확인하세요. 같은 입력을 한 번 더 보내 GET에서 해당 ID가 정확히 한 번 나오는지 검사하면 M1의 재전송 요구사항도 검증됩니다.
+
+- **minor** · [backend/README.md:42](backend/README.md:42), [backend/README.md:51](backend/README.md:51), [scripts/smoke.sh:24](scripts/smoke.sh:24) — **README의 직접 조회 예제가 앞 단계의 변수를 사용할 수 없습니다.** 예제의 인라인 환경변수는 스모크 명령에만 적용되므로, 이어서 `curl` 예제를 복사하면 `URL`과 `READ_KEY`가 비어 있을 수 있습니다. 키 교체 가이드가 허용하는 임의 문자열에 `&`가 들어가면 현재 스모크의 URL 조립도 키를 잘라냅니다. 직접 조회 예제에서 필요한 입력을 별도로 받고, 두 GET 예제 모두 `curl -G --data-urlencode`로 쿼리를 조립하세요.
+
+**종합 판정** · M1 배포 승인 보류. 로컬 테스트 26개와 `bash -n` 검사는 통과했습니다. 파일 변경은 없었습니다. 시트 연결, 락 해제 전 쓰기 확정, 문자열 저장을 수정한 뒤 실제 `/exec`에서 POST 재전송과 Safari GET을 검증해야 합니다. 이번 리뷰에서는 배포 URL을 호출하지 않았습니다.
