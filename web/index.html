@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="운동보드">
+  <meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0e0f12" media="(prefers-color-scheme: dark)">
+  <title>운동보드</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="top">
+      <div class="title-row">
+        <button class="icon-btn" id="prev" aria-label="이전 달">‹</button>
+        <div class="title">
+          <h1 id="month-title"></h1>
+          <button class="synced" id="synced" aria-label="지금 새로 고침"></button>
+          <p class="notice" id="notice" hidden>이 기기에 키를 저장하지 못했어요</p>
+        </div>
+        <button class="icon-btn" id="next" aria-label="다음 달">›</button>
+        <button class="today-btn" id="today">오늘</button>
+      </div>
+      <div class="segmented" role="tablist" id="filter"></div>
+    </header>
+
+    <section class="summary" id="summary"></section>
+
+    <main class="cal">
+      <div class="weekdays">
+        <span class="sun">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+      </div>
+      <div class="grid" id="grid"></div>
+    </main>
+  </div>
+
+  <!-- 날짜 상세 바텀시트 -->
+  <div class="backdrop" id="backdrop"></div>
+  <section class="sheet" id="sheet" aria-hidden="true">
+    <div class="grabber"></div>
+    <div class="sheet-head">
+      <button class="icon-btn" id="day-prev" aria-label="전날">‹</button>
+      <h2 id="sheet-title"></h2>
+      <button class="icon-btn" id="day-next" aria-label="다음날">›</button>
+      <button class="close" id="close" aria-label="닫기">✕</button>
+    </div>
+    <div class="sheet-body" id="sheet-body"></div>
+  </section>
+
+  <!-- 키 입력 화면 -->
+  <section class="gate" id="gate" hidden>
+    <div class="gate-card">
+      <div class="logo">🏃‍♂️🧘‍♀️</div>
+      <h1>운동보드</h1>
+      <p>공유 키를 입력하면 이 기기에서는<br>다음부터 바로 열려요.</p>
+      <form id="gate-form">
+        <input id="gate-key" type="password" inputmode="text" autocomplete="current-password" placeholder="공유 키" aria-label="공유 키">
+        <p class="gate-err" id="gate-err" hidden></p>
+        <button type="submit" id="gate-btn">열기</button>
+      </form>
+    </div>
+  </section>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
