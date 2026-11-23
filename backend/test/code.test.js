@@ -90,8 +90,8 @@ test('숫자 관대 파싱', () => {
   assert.equal(r2.updated, 1);
   const w2 = getAll(env).workouts[0];
   assert.equal(w2.active_kcal, 310);
-  assert.equal(w2.avg_hr, null);
-  assert.equal(w2.max_hr, null);
+  assert.equal(w2.avg_hr, 142); // 빈 값은 기존 측정값을 지우지 않음
+  assert.equal(w2.max_hr, 172);
 });
 
 test('범위 밖 심박/칼로리는 null, 빈 셀로 저장', () => {

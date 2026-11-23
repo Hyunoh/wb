@@ -11,7 +11,7 @@
 
 var SHEET_NAME = 'workouts';
 var HEADERS = ['id', 'user', 'type', 'start', 'end', 'duration_min',
-  'active_kcal', 'avg_hr', 'max_hr', 'received_at'];
+  'active_kcal', 'avg_hr', 'max_hr', 'received_at', 'first_received_at'];
 var NUM_COLS = HEADERS.length;
 var USERS = { me: 'WRITE_TOKEN_ME', wife: 'WRITE_TOKEN_WIFE' };
 var READ_KEY_PROP = 'READ_KEY';
@@ -60,14 +60,29 @@ function getSpreadsheet_() {
 /** workouts 시트가 없으면 만들고 헤더/서식/고정행을 설정한다. */
 function ensureSheet_(ss) {
   var sheet = ss.getSheetByName(SHEET_NAME);
-  if (sheet) return sheet;
+  if (sheet) return upgradeSheet_(sheet);
   sheet = ss.insertSheet(SHEET_NAME);
   sheet.getRange(1, 1, 1, NUM_COLS).setValues([HEADERS]);
   // 문자열 컬럼은 텍스트 서식(@)으로 고정해 시트가 날짜로 자동 변환하지 못하게 한다.
   var maxRows = sheet.getMaxRows();
   sheet.getRange(1, 1, maxRows, 5).setNumberFormat('@');   // id..end
-  sheet.getRange(1, 10, maxRows, 1).setNumberFormat('@');  // received_at
+  sheet.getRange(1, 10, maxRows, 2).setNumberFormat('@');  // received_at, first_received_at
   sheet.setFrozenRows(1);
+  return sheet;
+}
+
+/**
+ * 예전 10열 시트에 first_received_at 헤더(11열)가 없으면 추가한다.
+ * 기존 행의 first_received_at 은 알 수 없으므로 비워 둔다(received_at 으로 채우지 않음).
+ */
+function upgradeSheet_(sheet) {
+  var hdr = sheet.getRange(1, NUM_COLS, 1, 1).getValues()[0][0];
+  if (hdr === HEADERS[NUM_COLS - 1]) return sheet;
+  if (sheet.getMaxColumns() < NUM_COLS) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), NUM_COLS - sheet.getMaxColumns());
+  }
+  sheet.getRange(1, NUM_COLS, 1, 1).setValues([[HEADERS[NUM_COLS - 1]]]);
+  sheet.getRange(1, NUM_COLS, sheet.getMaxRows(), 1).setNumberFormat('@');
   return sheet;
 }
 
@@ -105,8 +120,13 @@ function safeEqual_(a, b) {
 function parseNum_(v) {
   if (v === null || v === undefined) return null;
   if (typeof v === 'number') return isFinite(v) ? v : null;
-  var s = String(v).replace(/[^0-9.\-]/g, '');
+  var s = String(v).replace(/[^0-9.,\-]/g, '');
   if (s === '') return null;
+  if (s.indexOf(',') >= 0) {
+    // 쉼표는 천 단위 구분으로만 허용: "1,204"(O), "310,4" / "1.204,5"(X)
+    if (!/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) return null;
+    s = s.replace(/,/g, '');
+  }
   var n = Number(s); // 전체가 숫자여야 함: "142-150" → NaN → null
   return isFinite(n) ? n : null;
 }
@@ -285,6 +305,7 @@ function upsertWorkouts_(user, workouts) {
       r[3] = cellStr_(r[3]);
       r[4] = cellStr_(r[4]);
       r[9] = cellStr_(r[9]);
+      r[10] = cellStr_(r[10]);
       if (!map.hasOwnProperty(id)) order.push(id);
       map[id] = r;
     }
@@ -300,9 +321,16 @@ function upsertWorkouts_(user, workouts) {
     var row = res.row;
     if (map.hasOwnProperty(row[0])) {
       updated++;
+      var old = map[row[0]];
+      // 새 값이 비어 있으면 기존 측정값(kcal/심박)을 유지한다.
+      for (var c = 6; c <= 8; c++) {
+        if (row[c] === '' && old[c] !== '' && old[c] !== null && old[c] !== undefined) row[c] = old[c];
+      }
+      row[10] = old[10] == null ? '' : old[10]; // first_received_at 불변
     } else {
       inserted++;
       order.push(row[0]);
+      row[10] = receivedAt;
     }
     map[row[0]] = row;
     changed = true;

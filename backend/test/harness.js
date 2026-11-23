@@ -5,19 +5,22 @@ const vm = require('node:vm');
 const crypto = require('node:crypto');
 
 const HEADERS = ['id', 'user', 'type', 'start', 'end', 'duration_min',
-  'active_kcal', 'avg_hr', 'max_hr', 'received_at'];
+  'active_kcal', 'avg_hr', 'max_hr', 'received_at', 'first_received_at'];
 
 class MockSheet {
   constructor(name) {
     this.name = name;
     this.grid = []; // grid[r][c], 0-based
     this.maxRows = 1000;
+    this.maxCols = 26;
     this.formats = [];
     this.frozen = 0;
     this.setValuesCalls = 0;
   }
   getMaxRows() { return this.maxRows; }
   insertRowsAfter(_pos, n) { this.maxRows += n; }
+  getMaxColumns() { return this.maxCols; }
+  insertColumnsAfter(_pos, n) { this.maxCols += n; }
   setFrozenRows(n) { this.frozen = n; }
   getLastRow() {
     for (let r = this.grid.length - 1; r >= 0; r--) {
